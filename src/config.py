@@ -6,12 +6,15 @@ DEFAULT_LANGUAGE = "en"
 SUPPORTED_LANGUAGES = {
     "en": "English",
     "ru": "Русский",
-    "es": "Español"
+    "es": "Español",
+    "zh": "中文",
+    "ar": "العربية"
 }
 
 def load_translations():
     try:
-        with open('translations.json', 'r', encoding='utf-8') as f:
+        translations_path = Path(__file__).parent / 'translations.json'
+        with open(translations_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
         raise FileNotFoundError("translations.json not found!")

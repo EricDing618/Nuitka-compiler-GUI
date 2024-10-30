@@ -1,9 +1,11 @@
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
-from config import (DEFAULT_WINDOW_SIZE, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES,
+from src.config import (DEFAULT_WINDOW_SIZE, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES,
                    load_translations)
-from compiler import NuitkaCompiler
-from gui_components import AdvancedOptionsFrame
+from src.compiler import NuitkaCompiler
+from src.gui_components import AdvancedOptionsFrame
+from functools import partial
+import threading
 
 class NuitkaGUI:
     def __init__(self):
@@ -12,14 +14,21 @@ class NuitkaGUI:
         self.widgets = {}
         self.options = {}
         self.translatable_widgets = {}
+        self.is_compiling = False
         self.load_translations()
+        self.create_theme_toggle()
         self.create_widgets()
         
     def setup_window(self):
         self.root.title("Nuitka GUI Compiler")
         self.root.geometry(DEFAULT_WINDOW_SIZE)
-        ctk.set_appearance_mode("dark")  # Always dark theme
+        self.root.minsize(800, 600)  # Set minimum window size
+        ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
+        
+        # Configure grid weight for responsive layout
+        self.root.grid_columnconfigure(0, weight=1)
+        self.root.grid_rowconfigure(0, weight=1)
         
     def load_translations(self):
         try:
@@ -30,17 +39,24 @@ class NuitkaGUI:
             self.root.quit()
             
     def create_widgets(self):
-        # Create main container with padding
-        self.main_container = ctk.CTkFrame(self.root)
+        # Main container with improved padding and organization
+        self.main_container = ctk.CTkScrollableFrame(self.root)
         self.main_container.pack(fill='both', expand=True, padx=10, pady=10)
         
-        self.create_language_selection()
-        self.create_file_selection()
-        self.create_basic_options()
-        self.create_advanced_options()
-        self.create_compile_section()
-        self.create_output_section()
+        # Create sections with proper spacing
+        sections = [
+            self.create_language_selection,
+            self.create_file_selection,
+            self.create_basic_options,
+            self.create_advanced_options,
+            self.create_compile_section,
+            self.create_output_section
+        ]
         
+        for section in sections:
+            section()
+            ctk.CTkFrame(self.main_container, height=2).pack(fill='x', pady=10)
+            
     def create_language_selection(self):
         lang_frame = ctk.CTkFrame(self.main_container)
         lang_frame.pack(fill='x', pady=5)
@@ -163,6 +179,46 @@ class NuitkaGUI:
         self.output_text = ctk.CTkTextbox(output_frame)
         self.output_text.pack(fill='both', expand=True, padx=5, pady=5)
 
+    def create_theme_toggle(self):
+        theme_frame = ctk.CTkFrame(self.root)
+        theme_frame.pack(fill='x', padx=10, pady=(5, 0))
+        
+        # Improved theme toggle button with better visual feedback
+        self.theme_button = ctk.CTkButton(
+            theme_frame,
+            text="🌙 Dark Mode" if ctk.get_appearance_mode() == "Dark" else "☀️ Light Mode",
+            command=self.toggle_theme,
+            width=120,
+            height=32,
+            corner_radius=8,
+            fg_color=("#2B2B2B" if ctk.get_appearance_mode() == "Dark" else "#E8E8E8"),
+            hover_color=("#363636" if ctk.get_appearance_mode() == "Dark" else "#D1D1D1"),
+            text_color=("#FFFFFF" if ctk.get_appearance_mode() == "Dark" else "#000000")
+        )
+        self.theme_button.pack(side='right', padx=5, pady=2)
+        
+        # Add tooltip-like label for theme button
+        self.theme_tooltip = ctk.CTkLabel(
+            theme_frame,
+            text="Switch between light and dark themes",
+            text_color="gray70"
+        )
+        self.theme_tooltip.pack(side='right', padx=10)
+        
+    def toggle_theme(self):
+        # Toggle between light and dark mode
+        current_mode = ctk.get_appearance_mode()
+        new_mode = "Light" if current_mode == "Dark" else "Dark"
+        ctk.set_appearance_mode(new_mode)
+        
+        # Update button appearance
+        self.theme_button.configure(
+            text="🌙 Dark Mode" if new_mode == "Dark" else "☀️ Light Mode",
+            fg_color=("#2B2B2B" if new_mode == "Dark" else "#E8E8E8"),
+            hover_color=("#363636" if new_mode == "Dark" else "#D1D1D1"),
+            text_color=("#FFFFFF" if new_mode == "Dark" else "#000000")
+        )
+
     def translate(self, key):
         return self.translations[self.current_language].get(key, key)
         
@@ -197,6 +253,9 @@ class NuitkaGUI:
             self.file_path.set(filename)
             
     def compile(self):
+        if self.is_compiling:
+            return
+            
         if not self.file_path.get():
             messagebox.showerror(
                 self.translate("error"),
@@ -204,20 +263,46 @@ class NuitkaGUI:
             )
             return
             
-        self.compile_btn.configure(state='disabled')
+        self.is_compiling = True
+        self.compile_btn.configure(
+            state='disabled',
+            text=self.translate("compilation_started")
+        )
         self.progress.start()
         self.output_text.delete(1.0, ctk.END)
         self.output_text.insert(ctk.END, self.translate("compilation_started") + "\n")
         
-        success, error = NuitkaCompiler.compile(
-            self.file_path.get(),
-            {k: v.get() for k, v in self.options.items()},
-            lambda x: self.output_text.insert(ctk.END, x),
-            lambda: self.root.update()
-        )
+        # Run compilation in a separate thread
+        threading.Thread(target=self._compile_thread, daemon=True).start()
         
+    def _compile_thread(self):
+        try:
+            success, error = NuitkaCompiler.compile(
+                self.file_path.get(),
+                {k: v.get() for k, v in self.options.items()},
+                self._update_output,
+                self._update_progress
+            )
+            
+            self.root.after(0, self._compilation_finished, success, error)
+            
+        except Exception as e:
+            self.root.after(0, self._compilation_finished, False, str(e))
+            
+    def _update_output(self, text):
+        self.root.after(0, lambda: self.output_text.insert(ctk.END, text + "\n"))
+        self.root.after(0, lambda: self.output_text.see(ctk.END))
+        
+    def _update_progress(self):
+        self.root.after(0, self.root.update)
+        
+    def _compilation_finished(self, success, error):
+        self.is_compiling = False
         self.progress.stop()
-        self.compile_btn.configure(state='normal')
+        self.compile_btn.configure(
+            state='normal',
+            text=self.translate("compile")
+        )
         
         if success:
             messagebox.showinfo(
@@ -231,8 +316,8 @@ class NuitkaGUI:
             )
 
 def main():
-    app = NuitkaGUI()
-    app.root.mainloop()
-
-if __name__ == "__main__":
-    main()
+    try:
+        app = NuitkaGUI()
+        app.root.mainloop()
+    except Exception as e:
+        messagebox.showerror("Fatal Error", f"An unexpected error occurred: {str(e)}")

@@ -33,6 +33,6 @@ A graphical interface for the Nuitka Python compiler that simplifies the process
 
 1. Launch the application:
    ```bash
-   python nuitka_gui.py
+   python main.py
    ```
 
