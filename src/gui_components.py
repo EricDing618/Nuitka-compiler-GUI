@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from tkinter import filedialog
+from typing import Dict
 
 class AdvancedOptionsFrame:
     def __init__(self, parent, translator, options):
@@ -7,8 +8,25 @@ class AdvancedOptionsFrame:
         self.translator = translator
         self.options = options
         self.widgets = {}
+        self.flag_dropdown = None
+        self.current_flag_mapping = {}  # Store current mapping of display text to flag values
         self.create_widgets()
-        
+
+    def get_localized_flags(self):
+        """Get the Python flags with localized descriptions"""
+        # Create and store the current mapping
+        self.current_flag_mapping = {
+            self.translator("flag_no_opt"): "-O0",
+            self.translator("flag_basic_opt"): "-O1",
+            self.translator("flag_extra_opt"): "-O2",
+            self.translator("flag_no_assert"): "-OO",
+            self.translator("flag_no_docstring"): "-OO",
+            self.translator("flag_no_bytecode"): "-B",
+            self.translator("flag_debug"): "-d",
+            self.translator("flag_verbose"): "-v"
+        }
+        return self.current_flag_mapping
+
     def create_widgets(self):
         title = ctk.CTkLabel(self.frame, text=self.translator("advanced_options"))
         title.pack(pady=5)
@@ -37,13 +55,32 @@ class AdvancedOptionsFrame:
             
     def create_right_options(self, parent):
         # Text fields
-        fields = ['include_module', 'python_flag']
+        fields = ['include_module']
         for field in fields:
             label = ctk.CTkLabel(parent, text=self.translator(field))
             label.pack(anchor='w', pady=2)
             self.widgets[field] = label
             entry = ctk.CTkEntry(parent, textvariable=self.options[field])
             entry.pack(fill='x', pady=2)
+        
+        # Python Flag dropdown with localized options
+        flag_frame = ctk.CTkFrame(parent)
+        flag_frame.pack(fill='x', pady=2)
+        
+        flag_label = ctk.CTkLabel(flag_frame, text=self.translator('python_flag'))
+        flag_label.pack(side='left', pady=2)
+        self.widgets['python_flag'] = flag_label
+        
+        localized_flags = self.get_localized_flags()
+        self.flag_dropdown = ctk.CTkOptionMenu(
+            flag_frame,
+            values=list(localized_flags.keys()),
+            command=self.on_flag_selected
+        )
+        self.flag_dropdown.pack(side='left', expand=True, fill='x', padx=2)
+        self.flag_dropdown.set(self.translator("flag_no_opt"))
+        # Set initial value
+        self.options['python_flag'].set(self.current_flag_mapping[self.translator("flag_no_opt")])
         
         # Checkboxes
         checkboxes = ['enable_console', 'windows_uac_admin', 'windows_uac_uiaccess']
@@ -101,9 +138,24 @@ class AdvancedOptionsFrame:
         if dirname:
             self.options[option_name].set(dirname) 
 
+    def on_flag_selected(self, display_text: str):
+        """Handle flag selection from dropdown"""
+        if display_text in self.current_flag_mapping:
+            self.options['python_flag'].set(self.current_flag_mapping[display_text])
+
     def update_translations(self, current_language):
         """Update translations for all widgets in the frame"""
-        # Update the frame title
+        # Update the frame title and basic widgets
         for widget_name, widget in self.widgets.items():
             if isinstance(widget, (ctk.CTkLabel, ctk.CTkCheckBox)):
                 widget.configure(text=self.translator(widget_name))
+        
+        # Update Python flag dropdown with new translations
+        if self.flag_dropdown:
+            current_value = self.flag_dropdown.get()
+            localized_flags = self.get_localized_flags()
+            self.flag_dropdown.configure(values=list(localized_flags.keys()))
+            # Set to default value in new language
+            self.flag_dropdown.set(self.translator("flag_no_opt"))
+            # Update the actual flag value
+            self.options['python_flag'].set(self.current_flag_mapping[self.translator("flag_no_opt")])
