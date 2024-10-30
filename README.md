@@ -1,4 +1,6 @@
 # Nuitka Compiler GUI
+![Static Badge](https://img.shields.io/badge/Nuitka-GUI-b4e) ![License](https://img.shields.io/badge/license-MIT-blue) ![Static Badge](https://img.shields.io/badge/Language-Python3-blue)
+
 
 A graphical interface for the Nuitka Python compiler that simplifies the process of compiling Python applications into standalone executables.
 
