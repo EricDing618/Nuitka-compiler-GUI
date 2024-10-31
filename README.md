@@ -4,13 +4,15 @@
 
 A graphical interface for the Nuitka Python compiler that simplifies the process of compiling Python applications into standalone executables.
 
-![Interface](interface.jpg)
+![Interface](1interface.jpg)
+
+![Interface](2interface.jpg)
 
 ## Features
 
 - Standalone executable generation
 - Single-file output option
-- Multi-language interface (English, Russian, Spanish)
+- Multi-language interface (English, Russian, Spanish, Chinese, Arabic)
 - Windows-specific settings (UAC, admin rights)
 - Custom icon integration
 - Company and product metadata

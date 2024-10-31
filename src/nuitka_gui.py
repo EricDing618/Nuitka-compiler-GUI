@@ -1,323 +1,452 @@
-import customtkinter as ctk
-from tkinter import filedialog, messagebox
+from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+                            QLabel, QPushButton, QCheckBox, QLineEdit, QFileDialog,
+                            QProgressBar, QTextEdit, QScrollArea, QFrame,
+                            QMessageBox, QComboBox)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from src.config import (DEFAULT_WINDOW_SIZE, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES,
-                   load_translations)
+                       load_translations)
 from src.compiler import NuitkaCompiler
 from src.gui_components import AdvancedOptionsFrame
-from functools import partial
-import threading
 
-class NuitkaGUI:
+class CompilerThread(QThread):
+    output_signal = pyqtSignal(str)
+    finished_signal = pyqtSignal(bool, str)
+    progress_signal = pyqtSignal()
+
+    def __init__(self, file_path, options):
+        super().__init__()
+        self.file_path = file_path
+        self.options = options
+
+    def run(self):
+        try:
+            success, error = NuitkaCompiler.compile(
+                self.file_path,
+                self.options,
+                lambda x: self.output_signal.emit(x),
+                lambda: self.progress_signal.emit()
+            )
+            self.finished_signal.emit(success, error)
+        except Exception as e:
+            self.finished_signal.emit(False, str(e))
+
+class NuitkaGUI(QMainWindow):
     def __init__(self):
-        self.root = ctk.CTk()
+        super().__init__()
         self.setup_window()
         self.widgets = {}
         self.options = {}
         self.translatable_widgets = {}
         self.is_compiling = False
         self.load_translations()
-        self.create_theme_toggle()
         self.create_widgets()
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #f0f0f0;
+            }
+            QFrame {
+                background-color: white;
+                border-radius: 5px;
+                padding: 5px;
+            }
+            QPushButton {
+                background-color: #0078D4;
+                color: white;
+                border-radius: 3px;
+                padding: 5px 15px;
+                min-height: 25px;
+            }
+            QPushButton:hover {
+                background-color: #1084D9;
+            }
+            QPushButton:pressed {
+                background-color: #006CBD;
+            }
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                min-height: 25px;
+            }
+            QCheckBox {
+                spacing: 8px;
+            }
+            QProgressBar {
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                text-align: center;
+                min-height: 20px;
+            }
+            QProgressBar::chunk {
+                background-color: #0078D4;
+            }
+            QTextEdit {
+                border: 1px solid #ccc;
+                border-radius: 3px;
+            }
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+        """)
         
     def setup_window(self):
-        self.root.title("Nuitka GUI Compiler")
-        self.root.geometry(DEFAULT_WINDOW_SIZE)
-        self.root.minsize(800, 600)  # Set minimum window size
-        ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
+        self.setWindowTitle("Nuitka GUI Compiler")
+        width, height = map(int, DEFAULT_WINDOW_SIZE.split('x'))
+        self.resize(width, height)
+        self.setMinimumSize(800, 600)
         
-        # Configure grid weight for responsive layout
-        self.root.grid_columnconfigure(0, weight=1)
-        self.root.grid_rowconfigure(0, weight=1)
-        
+        # Create central widget and main layout
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout.setContentsMargins(20, 20, 20, 20)
+        self.main_layout.setSpacing(15)
+
     def load_translations(self):
         try:
             self.translations = load_translations()
             self.current_language = DEFAULT_LANGUAGE
         except FileNotFoundError as e:
-            messagebox.showerror("Error", str(e))
-            self.root.quit()
+            QMessageBox.critical(self, "Error", str(e))
+            self.close()
             
     def create_widgets(self):
-        # Main container with improved padding and organization
-        self.main_container = ctk.CTkScrollableFrame(self.root)
-        self.main_container.pack(fill='both', expand=True, padx=10, pady=10)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        scroll_layout.setContentsMargins(10, 10, 10, 10)
+        scroll_layout.setSpacing(20)
         
-        # Create sections with proper spacing
+        # Create sections with localized titles
         sections = [
-            self.create_language_selection,
-            self.create_file_selection,
-            self.create_basic_options,
-            self.create_advanced_options,
-            self.create_compile_section,
-            self.create_output_section
+            ("language_selection", self.create_language_selection),
+            ("file_selection", self.create_file_selection),
+            ("basic_options", self.create_basic_options),
+            ("advanced_options", self.create_advanced_options),
+            ("compilation", self.create_compile_section),
+            ("output", self.create_output_section)
         ]
         
-        for section in sections:
-            section()
-            ctk.CTkFrame(self.main_container, height=2).pack(fill='x', pady=10)
+        for section_key, section_creator in sections:
+            section_frame = QFrame()
+            section_frame.setObjectName("section-frame")
+            section_layout = QVBoxLayout(section_frame)
             
-    def create_language_selection(self):
-        lang_frame = ctk.CTkFrame(self.main_container)
-        lang_frame.pack(fill='x', pady=5)
+            # Add localized section title
+            title_label = QLabel(self.translate(section_key))
+            title_label.setObjectName("section-title")
+            title_label.setStyleSheet("""
+                QLabel#section-title {
+                    font-size: 14px;
+                    font-weight: bold;
+                    color: #333;
+                    padding: 5px;
+                    border-bottom: 1px solid #ddd;
+                    margin-bottom: 5px;
+                }
+            """)
+            section_layout.addWidget(title_label)
+            self.translatable_widgets[section_key] = title_label
+            
+            # Add section content
+            content = section_creator()
+            section_layout.addWidget(content)
+            
+            scroll_layout.addWidget(section_frame)
         
-        lang_label = ctk.CTkLabel(lang_frame, text=self.translate("language"))
-        lang_label.pack(side='left', padx=5)
+        scroll.setWidget(scroll_widget)
+        self.main_layout.addWidget(scroll)
+
+    def create_language_selection(self):
+        container = QFrame()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(10, 5, 10, 5)
         
         for lang_code, lang_name in SUPPORTED_LANGUAGES.items():
-            btn = ctk.CTkButton(
-                lang_frame, 
-                text=lang_name,
-                command=lambda l=lang_code: self.change_language(l),
-                width=100
-            )
-            btn.pack(side='left', padx=5, pady=5)
+            btn = QPushButton(lang_name)
+            btn.clicked.connect(lambda checked, l=lang_code: self.change_language(l))
+            btn.setFixedWidth(100)
+            if lang_code == self.current_language:
+                btn.setStyleSheet("""
+                    background-color: #005A9E;
+                    font-weight: bold;
+                """)
+            layout.addWidget(btn)
             self.widgets[f"lang_{lang_code}"] = btn
-        
+            
+        layout.addStretch()
+        return container
+
     def create_file_selection(self):
-        file_frame = ctk.CTkFrame(self.main_container)
-        file_frame.pack(fill='x', pady=5)
+        container = QFrame()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(10, 5, 10, 5)
         
-        self.file_path = ctk.StringVar()
-        self.file_entry = ctk.CTkEntry(file_frame, textvariable=self.file_path)
-        self.file_entry.pack(side='left', padx=5, pady=5, expand=True, fill='x')
+        self.file_path = QLineEdit()
+        self.file_path.setPlaceholderText(self.translate("select_file"))
+        layout.addWidget(self.file_path)
         
-        browse_btn = ctk.CTkButton(file_frame, text="...", width=30,
-                                 command=self.browse_file)
-        browse_btn.pack(side='right', padx=5, pady=5)
+        browse_btn = QPushButton("...")
+        browse_btn.setFixedWidth(30)
+        browse_btn.clicked.connect(self.browse_file)
+        layout.addWidget(browse_btn)
+        
+        return container
 
     def create_basic_options(self):
-        basic_frame = ctk.CTkFrame(self.main_container)
-        basic_frame.pack(fill='x', pady=5)
+        container = QFrame()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(10, 5, 10, 5)
         
-        title = ctk.CTkLabel(basic_frame, text=self.translate("basic_options"))
-        title.pack(pady=5)
+        options_frame = QFrame()
+        options_layout = QHBoxLayout(options_frame)
         
-        # Create two columns for options
-        left_frame = ctk.CTkFrame(basic_frame)
-        left_frame.pack(side='left', fill='x', expand=True, padx=5)
+        left_frame = QFrame()
+        left_layout = QVBoxLayout(left_frame)
+        right_frame = QFrame()
+        right_layout = QVBoxLayout(right_frame)
         
-        right_frame = ctk.CTkFrame(basic_frame)
-        right_frame.pack(side='left', fill='x', expand=True, padx=5)
-        
+        # Initialize basic options
         self.options.update({
-            'standalone': ctk.BooleanVar(value=True),
-            'onefile': ctk.BooleanVar(value=True),
-            'remove_output': ctk.BooleanVar(value=True),
-            'follow_imports': ctk.BooleanVar(value=True),
-            'show_progress': ctk.BooleanVar(value=True),
-            'show_memory': ctk.BooleanVar(value=True)
+            'standalone': False,
+            'onefile': False,
+            'remove_output': False,
+            'follow_imports': False,
+            'show_progress': False,
+            'show_memory': False
         })
         
         # Left column options
         for option in ['standalone', 'onefile', 'remove_output']:
-            cb = ctk.CTkCheckBox(
-                left_frame,
-                text=self.translate(option),
-                variable=self.options[option]
-            )
-            cb.pack(anchor='w', pady=2)
+            cb = QCheckBox(self.translate(option))
+            cb.setChecked(self.options[option])
+            cb.stateChanged.connect(lambda state, opt=option: self.update_option(opt, bool(state)))
+            left_layout.addWidget(cb)
             self.translatable_widgets[option] = cb
+            
+            # Add tooltip
+            if f"tooltip_{option}" in self.translations[self.current_language]:
+                cb.setToolTip(self.translate(f"tooltip_{option}"))
         
         # Right column options
         for option in ['follow_imports', 'show_progress', 'show_memory']:
-            cb = ctk.CTkCheckBox(
-                right_frame,
-                text=self.translate(option),
-                variable=self.options[option]
-            )
-            cb.pack(anchor='w', pady=2)
+            cb = QCheckBox(self.translate(option))
+            cb.setChecked(self.options[option])
+            cb.stateChanged.connect(lambda state, opt=option: self.update_option(opt, bool(state)))
+            right_layout.addWidget(cb)
             self.translatable_widgets[option] = cb
+            
+            # Add tooltip
+            if f"tooltip_{option}" in self.translations[self.current_language]:
+                cb.setToolTip(self.translate(f"tooltip_{option}"))
+        
+        options_layout.addWidget(left_frame)
+        options_layout.addWidget(right_frame)
+        layout.addWidget(options_frame)
+        
+        return container
 
     def create_advanced_options(self):
-        """Create the advanced options section"""
-        # Initialize advanced options first
+        # Initialize advanced options
         self.options.update({
-            'enable_console': ctk.BooleanVar(value=True),
-            'windows_uac_admin': ctk.BooleanVar(value=False),
-            'windows_uac_uiaccess': ctk.BooleanVar(value=False),
-            'windows_icon_path': ctk.StringVar(),
-            'company_name': ctk.StringVar(),
-            'product_name': ctk.StringVar(),
-            'file_version': ctk.StringVar(),
-            'output_dir': ctk.StringVar(),
-            'python_flag': ctk.StringVar(),
-            'include_package': ctk.StringVar(),
-            'include_module': ctk.StringVar()
+            'enable_console': True,
+            'windows_uac_admin': False,
+            'windows_uac_uiaccess': False,
+            'windows_icon_path': '',
+            'company_name': '',
+            'product_name': '',
+            'file_version': '',
+            'output_dir': '',
+            'python_flag': '',
+            'include_package': '',
+            'include_module': ''
         })
         
-        # Then create the frame
-        self.advanced_frame = AdvancedOptionsFrame(
-            self.main_container,
-            self.translate,
-            self.options
-        )
-        self.advanced_frame.frame.pack(fill='x', pady=5)
+        container = QFrame()
+        layout = QVBoxLayout(container)
+        
+        self.advanced_frame = AdvancedOptionsFrame(container, self.translate, self.options)
+        layout.addWidget(self.advanced_frame)
+        
+        return container
 
     def create_compile_section(self):
-        compile_frame = ctk.CTkFrame(self.main_container)
-        compile_frame.pack(fill='x', pady=10)
+        container = QFrame()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(10, 5, 10, 5)
         
-        self.compile_btn = ctk.CTkButton(
-            compile_frame,
-            text=self.translate("compile"),
-            command=self.compile
-        )
-        self.compile_btn.pack(pady=5)
+        self.compile_btn = QPushButton(self.translate("compile"))
+        self.compile_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #107C10;
+                font-size: 14px;
+                font-weight: bold;
+                min-height: 35px;
+            }
+            QPushButton:hover {
+                background-color: #138513;
+            }
+            QPushButton:pressed {
+                background-color: #0E6A0E;
+            }
+        """)
+        self.compile_btn.clicked.connect(self.compile)
+        layout.addWidget(self.compile_btn)
         
-        self.progress = ctk.CTkProgressBar(compile_frame)
-        self.progress.pack(fill='x', pady=5)
-        self.progress.set(0)  # Initialize progress
+        self.progress = QProgressBar()
+        layout.addWidget(self.progress)
         
+        return container
+
     def create_output_section(self):
-        output_frame = ctk.CTkFrame(self.main_container)
-        output_frame.pack(fill='both', expand=True, pady=5)
+        container = QFrame()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(10, 5, 10, 5)
         
-        output_label = ctk.CTkLabel(output_frame, text=self.translate("output"))
-        output_label.pack(pady=5)
+        # Remove redundant label since we have section title
+        self.output_text = QTextEdit()
+        self.output_text.setReadOnly(True)
+        self.output_text.setStyleSheet("""
+            QTextEdit {
+                background-color: #1E1E1E;
+                color: #D4D4D4;
+                font-family: Consolas, monospace;
+                padding: 10px;
+            }
+        """)
+        self.output_text.setMinimumHeight(200)
+        layout.addWidget(self.output_text)
         
-        self.output_text = ctk.CTkTextbox(output_frame)
-        self.output_text.pack(fill='both', expand=True, padx=5, pady=5)
+        return container
 
-    def create_theme_toggle(self):
-        theme_frame = ctk.CTkFrame(self.root)
-        theme_frame.pack(fill='x', padx=10, pady=(5, 0))
-        
-        # Improved theme toggle button with better visual feedback
-        self.theme_button = ctk.CTkButton(
-            theme_frame,
-            text="🌙 Dark Mode" if ctk.get_appearance_mode() == "Dark" else "☀️ Light Mode",
-            command=self.toggle_theme,
-            width=120,
-            height=32,
-            corner_radius=8,
-            fg_color=("#2B2B2B" if ctk.get_appearance_mode() == "Dark" else "#E8E8E8"),
-            hover_color=("#363636" if ctk.get_appearance_mode() == "Dark" else "#D1D1D1"),
-            text_color=("#FFFFFF" if ctk.get_appearance_mode() == "Dark" else "#000000")
-        )
-        self.theme_button.pack(side='right', padx=5, pady=2)
-        
-        # Add tooltip-like label for theme button
-        self.theme_tooltip = ctk.CTkLabel(
-            theme_frame,
-            text="Switch between light and dark themes",
-            text_color="gray70"
-        )
-        self.theme_tooltip.pack(side='right', padx=10)
-        
-    def toggle_theme(self):
-        # Toggle between light and dark mode
-        current_mode = ctk.get_appearance_mode()
-        new_mode = "Light" if current_mode == "Dark" else "Dark"
-        ctk.set_appearance_mode(new_mode)
-        
-        # Update button appearance
-        self.theme_button.configure(
-            text="🌙 Dark Mode" if new_mode == "Dark" else "☀️ Light Mode",
-            fg_color=("#2B2B2B" if new_mode == "Dark" else "#E8E8E8"),
-            hover_color=("#363636" if new_mode == "Dark" else "#D1D1D1"),
-            text_color=("#FFFFFF" if new_mode == "Dark" else "#000000")
-        )
-
-    def translate(self, key):
-        return self.translations[self.current_language].get(key, key)
-        
-    def change_language(self, lang):
-        self.current_language = lang
-        self.update_translations()
-        
-    def update_translations(self):
-        """Update all translatable widgets"""
-        # Update basic widgets and frames
-        for widget_name, widget in self.translatable_widgets.items():
-            if hasattr(widget, 'configure'):
-                widget.configure(text=self.translate(widget_name))
-        
-        # Update frame labels
-        for frame_name in ['basic_options', 'file_selection', 'output']:
-            if frame_name in self.widgets:
-                self.widgets[frame_name].configure(text=self.translate(frame_name))
-        
-        # Update advanced options
-        if hasattr(self, 'advanced_frame'):
-            self.advanced_frame.update_translations(self.current_language)
-        
-        # Update compile button
-        if hasattr(self, 'compile_btn'):
-            self.compile_btn.configure(text=self.translate('compile'))
-        
     def browse_file(self):
-        filename = filedialog.askopenfilename(
-            filetypes=[("Python files", "*.py"), ("All files", "*.*")])
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            self.translate("select_file"),
+            "",
+            "Python files (*.py);;All files (*.*)"
+        )
         if filename:
-            self.file_path.set(filename)
-            
+            self.file_path.setText(filename)
+
+    def update_option(self, option, value):
+        self.options[option] = value
+
     def compile(self):
         if self.is_compiling:
             return
             
-        if not self.file_path.get():
-            messagebox.showerror(
+        if not self.file_path.text():
+            QMessageBox.critical(
+                self,
                 self.translate("error"),
                 self.translate("no_file_selected")
             )
             return
             
         self.is_compiling = True
-        self.compile_btn.configure(
-            state='disabled',
-            text=self.translate("compilation_started")
+        self.compile_btn.setEnabled(False)
+        self.compile_btn.setText(self.translate("compilation_started"))
+        self.progress.setRange(0, 0)  # Indeterminate progress
+        self.output_text.clear()
+        self.output_text.append(self.translate("compilation_started") + "\n")
+        
+        # Create and start compiler thread
+        self.compiler_thread = CompilerThread(
+            self.file_path.text(),
+            self.options
         )
-        self.progress.start()
-        self.output_text.delete(1.0, ctk.END)
-        self.output_text.insert(ctk.END, self.translate("compilation_started") + "\n")
-        
-        # Run compilation in a separate thread
-        threading.Thread(target=self._compile_thread, daemon=True).start()
-        
-    def _compile_thread(self):
-        try:
-            success, error = NuitkaCompiler.compile(
-                self.file_path.get(),
-                {k: v.get() for k, v in self.options.items()},
-                self._update_output,
-                self._update_progress
-            )
-            
-            self.root.after(0, self._compilation_finished, success, error)
-            
-        except Exception as e:
-            self.root.after(0, self._compilation_finished, False, str(e))
-            
-    def _update_output(self, text):
-        self.root.after(0, lambda: self.output_text.insert(ctk.END, text + "\n"))
-        self.root.after(0, lambda: self.output_text.see(ctk.END))
-        
-    def _update_progress(self):
-        self.root.after(0, self.root.update)
-        
-    def _compilation_finished(self, success, error):
+        self.compiler_thread.output_signal.connect(self.update_output)
+        self.compiler_thread.finished_signal.connect(self.compilation_finished)
+        self.compiler_thread.progress_signal.connect(self.update_progress)
+        self.compiler_thread.start()
+
+    def update_output(self, text):
+        self.output_text.append(text)
+        self.output_text.verticalScrollBar().setValue(
+            self.output_text.verticalScrollBar().maximum()
+        )
+
+    def update_progress(self):
+        # Called when progress signal is emitted
+        pass
+
+    def compilation_finished(self, success, error):
         self.is_compiling = False
-        self.progress.stop()
-        self.compile_btn.configure(
-            state='normal',
-            text=self.translate("compile")
-        )
+        self.progress.setRange(0, 100)
+        self.progress.setValue(100 if success else 0)
+        self.compile_btn.setEnabled(True)
+        self.compile_btn.setText(self.translate("compile"))
         
         if success:
-            messagebox.showinfo(
+            QMessageBox.information(
+                self,
                 self.translate("success"),
                 self.translate("compilation_successful")
             )
         else:
-            messagebox.showerror(
+            QMessageBox.critical(
+                self,
                 self.translate("error"),
                 error or self.translate("compilation_failed")
             )
 
+    def translate(self, key):
+        return self.translations[self.current_language].get(key, key)
+        
+    def change_language(self, lang):
+        old_lang = self.current_language
+        self.current_language = lang
+        self.update_translations()
+        
+        # Update window title
+        self.setWindowTitle(f"Nuitka GUI - {SUPPORTED_LANGUAGES[lang]}")
+
+    def update_translations(self):
+        """Update all translatable widgets"""
+        # Update section titles and other widgets
+        for widget_name, widget in self.translatable_widgets.items():
+            if isinstance(widget, (QLabel, QCheckBox, QPushButton)):
+                widget.setText(self.translate(widget_name))
+                
+                # Update tooltips for checkboxes
+                if isinstance(widget, QCheckBox) and f"tooltip_{widget_name}" in self.translations[self.current_language]:
+                    widget.setToolTip(self.translate(f"tooltip_{widget_name}"))
+        
+        # Update file selection placeholder
+        if hasattr(self, 'file_path'):
+            self.file_path.setPlaceholderText(self.translate("select_file"))
+        
+        # Update compile button
+        if hasattr(self, 'compile_btn'):
+            self.compile_btn.setText(self.translate("compile"))
+        
+        # Update advanced options
+        if hasattr(self, 'advanced_frame'):
+            self.advanced_frame.update_translations(self.current_language)
+        
+        # Update language buttons
+        for lang_code, btn in self.widgets.items():
+            if lang_code.startswith("lang_"):
+                code = lang_code.split("_")[1]
+                if code == self.current_language:
+                    btn.setStyleSheet("""
+                        background-color: #005A9E;
+                        font-weight: bold;
+                    """)
+                else:
+                    btn.setStyleSheet("")
+
 def main():
+    from PyQt6.QtWidgets import QApplication
+    import sys
+    
     try:
-        app = NuitkaGUI()
-        app.root.mainloop()
+        app = QApplication(sys.argv)
+        window = NuitkaGUI()
+        window.show()
+        sys.exit(app.exec())
     except Exception as e:
-        messagebox.showerror("Fatal Error", f"An unexpected error occurred: {str(e)}")
+        QMessageBox.critical(None, "Fatal Error", f"An unexpected error occurred: {str(e)}")
