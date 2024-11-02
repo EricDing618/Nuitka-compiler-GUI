@@ -1,2 +1,5 @@
-nuitka>=2.0
+nuitka>=2.0.0
+colorama>=0.4.6
 PyQt6>=6.4.0
+setuptools>=65.5.1
+wheel>=0.38.4
