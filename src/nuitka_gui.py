@@ -7,6 +7,7 @@ from src.config import (DEFAULT_WINDOW_SIZE, DEFAULT_LANGUAGE, SUPPORTED_LANGUAG
                        load_translations)
 from src.compiler import NuitkaCompiler
 from src.gui_components import AdvancedOptionsFrame
+from src.ui import create_theme_button, get_theme_styles
 
 class CompilerThread(QThread):
     output_signal = pyqtSignal(str)
@@ -33,63 +34,16 @@ class CompilerThread(QThread):
 class NuitkaGUI(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setup_window()
         self.widgets = {}
         self.options = {}
         self.translatable_widgets = {}
         self.is_compiling = False
+        self.is_dark_theme = False
         self.load_translations()
+        self.setup_window()
         self.create_widgets()
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f0f0f0;
-            }
-            QFrame {
-                background-color: white;
-                border-radius: 5px;
-                padding: 5px;
-            }
-            QPushButton {
-                background-color: #0078D4;
-                color: white;
-                border-radius: 3px;
-                padding: 5px 15px;
-                min-height: 25px;
-            }
-            QPushButton:hover {
-                background-color: #1084D9;
-            }
-            QPushButton:pressed {
-                background-color: #006CBD;
-            }
-            QLineEdit {
-                padding: 5px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                min-height: 25px;
-            }
-            QCheckBox {
-                spacing: 8px;
-            }
-            QProgressBar {
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                text-align: center;
-                min-height: 20px;
-            }
-            QProgressBar::chunk {
-                background-color: #0078D4;
-            }
-            QTextEdit {
-                border: 1px solid #ccc;
-                border-radius: 3px;
-            }
-            QScrollArea {
-                border: none;
-                background-color: transparent;
-            }
-        """)
-        
+        self.apply_theme()
+
     def setup_window(self):
         self.setWindowTitle("Nuitka GUI Compiler")
         width, height = map(int, DEFAULT_WINDOW_SIZE.split('x'))
@@ -102,6 +56,27 @@ class NuitkaGUI(QMainWindow):
         self.main_layout = QVBoxLayout(self.central_widget)
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(15)
+
+        # Add theme toggle button in top-right corner
+        self.theme_btn = create_theme_button(self, self.translate)
+        self.theme_btn.clicked.connect(self.toggle_theme)
+        self.theme_btn.move(self.width() - 40, 10)
+
+    def apply_theme(self):
+        self.setStyleSheet(get_theme_styles(self.is_dark_theme))
+        icon = "☀️" if self.is_dark_theme else "🌙"
+        text = self.translate("light_mode") if self.is_dark_theme else self.translate("dark_mode")
+        self.theme_btn.setText(icon)
+        self.theme_btn.setToolTip(text)
+
+    def toggle_theme(self):
+        self.is_dark_theme = not self.is_dark_theme
+        self.apply_theme()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, 'theme_btn'):
+            self.theme_btn.move(self.width() - 40, 10)
 
     def load_translations(self):
         try:
@@ -141,9 +116,8 @@ class NuitkaGUI(QMainWindow):
                 QLabel#section-title {
                     font-size: 14px;
                     font-weight: bold;
-                    color: #333;
                     padding: 5px;
-                    border-bottom: 1px solid #ddd;
+                    border-bottom: 1px solid #444;
                     margin-bottom: 5px;
                 }
             """)
@@ -338,11 +312,12 @@ class NuitkaGUI(QMainWindow):
         if self.is_compiling:
             return
             
-        if not self.file_path.text():
-            QMessageBox.critical(
+        if not self.file_path.text().strip():
+            QMessageBox.warning(
                 self,
                 self.translate("error"),
-                self.translate("no_file_selected")
+                self.translate("no_file_selected"),
+                QMessageBox.StandardButton.Ok
             )
             return
             
@@ -394,7 +369,11 @@ class NuitkaGUI(QMainWindow):
             )
 
     def translate(self, key):
-        return self.translations[self.current_language].get(key, key)
+        """Safely translate a key, returning the key itself if translation fails"""
+        try:
+            return self.translations[self.current_language].get(key, key)
+        except (AttributeError, KeyError):
+            return key
         
     def change_language(self, lang):
         old_lang = self.current_language

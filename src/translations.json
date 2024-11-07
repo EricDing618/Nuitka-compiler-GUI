@@ -41,7 +41,10 @@
         "flag_no_bytecode": "No bytecode (-B)",
         "flag_debug": "Debug mode (-d)",
         "flag_verbose": "Verbose imports (-v)",
-        "build_name": "Build Name"
+        "build_name": "Build Name",
+        "switch_theme": "Switch Theme (Light/Dark)",
+        "light_mode": "Switch to Light Mode",
+        "dark_mode": "Switch to Dark Mode"
     },
     "ru": {
         "language_selection": "Выбор языка",
@@ -84,7 +87,7 @@
         "flag_no_docstring": "Без строк документации (-OO)",
         "flag_no_bytecode": "Без байт-кода (-B)",
         "flag_debug": "Режим отладки (-d)",
-        "flag_verbose": "Подробный вывод импортов (-v)",
+        "flag_verbose": "Подробный вывод им��ортов (-v)",
         "tooltip_standalone": "Создать автономный исполняемый файл со всеми зависимостями",
         "tooltip_onefile": "Упаковать всё в один исполняемый файл",
         "tooltip_remove_output": "Удалить временные файлы сборки после компиляции",
@@ -113,7 +116,10 @@
         "opt_level_3": "Полная оптимизация",
         "lto_none": "Без LTO",
         "lto_thin": "Тонкое LTO",
-        "lto_full": "Полное LTO"
+        "lto_full": "Полное LTO",
+        "switch_theme": "Переключить тему (Светлая/Темная)",
+        "light_mode": "Переключить на светлую тему",
+        "dark_mode": "Переключить на темную тему"
     },
     "es": {
         "language_selection": "Selección de idioma",
@@ -185,7 +191,10 @@
         "opt_level_3": "Optimización completa",
         "lto_none": "Sin LTO",
         "lto_thin": "LTO delgado",
-        "lto_full": "LTO completo"
+        "lto_full": "LTO completo",
+        "switch_theme": "Cambiar tema (Claro/Oscuro)",
+        "light_mode": "Cambiar a modo claro",
+        "dark_mode": "Cambiar a modo oscuro"
     },
     "zh": {
         "language_selection": "语言选择",
@@ -257,7 +266,10 @@
         "opt_level_3": "完全优化",
         "lto_none": "无LTO",
         "lto_thin": "薄LTO",
-        "lto_full": "完整LTO"
+        "lto_full": "完整LTO",
+        "switch_theme": "切换主题（明亮/暗黑）",
+        "light_mode": "切换到明亮模式",
+        "dark_mode": "切换到暗黑模式"
     },
     "ar": {
         "language_selection": "اختيار اللغة",
@@ -329,6 +341,9 @@
         "opt_level_3": "تحسين كامل",
         "lto_none": "بدون LTO",
         "lto_thin": "LTO مصغر",
-        "lto_full": "LTO كامل"
+        "lto_full": "LTO كامل",
+        "switch_theme": "تبديل السمة (فاتح/داكن)",
+        "light_mode": "التبديل إلى الوضع الفاتح",
+        "dark_mode": "التبديل إلى الوضع الداكن"
     }
 }
