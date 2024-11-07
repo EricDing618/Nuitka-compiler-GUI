@@ -40,3 +40,6 @@ A graphical interface for the Nuitka Python compiler that simplifies the process
    python main.py
    ```
 
+## Repository info
+
+![Alt]( https://repobeats.axiom.co/api/embed/85013d1a71cbae7eb3b1b4ae700d4e852c8e140d.svg "Repobeats")
