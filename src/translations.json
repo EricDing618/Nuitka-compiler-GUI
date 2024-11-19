@@ -44,7 +44,9 @@
         "build_name": "Build Name",
         "switch_theme": "Switch Theme (Light/Dark)",
         "light_mode": "Switch to Light Mode",
-        "dark_mode": "Switch to Dark Mode"
+        "dark_mode": "Switch to Dark Mode",
+        "c_compiler": "C Compiler",
+        "tooltip_c_compiler": "Select the C compiler to use for compilation"
     },
     "ru": {
         "language_selection": "Выбор языка",
@@ -87,7 +89,7 @@
         "flag_no_docstring": "Без строк документации (-OO)",
         "flag_no_bytecode": "Без байт-кода (-B)",
         "flag_debug": "Режим отладки (-d)",
-        "flag_verbose": "Подробный вывод им��ортов (-v)",
+        "flag_verbose": "Подробный вывод имортов (-v)",
         "tooltip_standalone": "Создать автономный исполняемый файл со всеми зависимостями",
         "tooltip_onefile": "Упаковать всё в один исполняемый файл",
         "tooltip_remove_output": "Удалить временные файлы сборки после компиляции",
@@ -119,7 +121,9 @@
         "lto_full": "Полное LTO",
         "switch_theme": "Переключить тему (Светлая/Темная)",
         "light_mode": "Переключить на светлую тему",
-        "dark_mode": "Переключить на темную тему"
+        "dark_mode": "Переключить на темную тему",
+        "c_compiler": "C Компилятор",
+        "tooltip_c_compiler": "Выберите C компилятор для компиляции"
     },
     "es": {
         "language_selection": "Selección de idioma",
@@ -194,7 +198,9 @@
         "lto_full": "LTO completo",
         "switch_theme": "Cambiar tema (Claro/Oscuro)",
         "light_mode": "Cambiar a modo claro",
-        "dark_mode": "Cambiar a modo oscuro"
+        "dark_mode": "Cambiar a modo oscuro",
+        "c_compiler": "Compilador C",
+        "tooltip_c_compiler": "Seleccione el compilador C para la compilación"
     },
     "zh": {
         "language_selection": "语言选择",
@@ -269,7 +275,9 @@
         "lto_full": "完整LTO",
         "switch_theme": "切换主题（明亮/暗黑）",
         "light_mode": "切换到明亮模式",
-        "dark_mode": "切换到暗黑模式"
+        "dark_mode": "切换到暗黑模式",
+        "c_compiler": "C编译器",
+        "tooltip_c_compiler": "选择用于编译的C编译器"
     },
     "ar": {
         "language_selection": "اختيار اللغة",
@@ -344,6 +352,8 @@
         "lto_full": "LTO كامل",
         "switch_theme": "تبديل السمة (فاتح/داكن)",
         "light_mode": "التبديل إلى الوضع الفاتح",
-        "dark_mode": "التبديل إلى الوضع الداكن"
+        "dark_mode": "التبديل إلى الوضع الداكن",
+        "c_compiler": "مترجم C",
+        "tooltip_c_compiler": "حدد مترجم C المستخدم للترجمة"
     }
 }

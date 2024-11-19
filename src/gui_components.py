@@ -124,6 +124,37 @@ class AdvancedOptionsFrame(QFrame):
         
         layout.addWidget(flag_frame)
         
+        # Python Flag dropdown styling
+        self.flag_dropdown.setFixedWidth(200)  # Set fixed width
+        self.flag_dropdown.setMaxVisibleItems(8)  # Show max 8 items in dropdown
+        
+        # C Compiler dropdown
+        compiler_frame = QFrame()
+        compiler_layout = QHBoxLayout(compiler_frame)
+        
+        compiler_label = QLabel(self.translator('c_compiler'))
+        compiler_layout.addWidget(compiler_label)
+        self.widgets['c_compiler'] = compiler_label
+        
+        # Define available C compilers
+        self.compiler_mapping = {
+            'MinGW64 (default)': 'mingw64',
+            'MSVC': 'msvc',
+            'MinGW32': 'mingw32',
+            'Clang': 'clang'
+        }
+        
+        self.compiler_dropdown = QComboBox()
+        self.compiler_dropdown.addItems(self.compiler_mapping.keys())
+        self.compiler_dropdown.currentTextChanged.connect(self.on_compiler_selected)
+        compiler_layout.addWidget(self.compiler_dropdown)
+        
+        layout.addWidget(compiler_frame)
+        
+        # C Compiler dropdown styling
+        self.compiler_dropdown.setFixedWidth(200)  # Set fixed width
+        self.compiler_dropdown.setMaxVisibleItems(8)  # Show max 8 items in dropdown
+        
         # Checkboxes
         checkboxes = ['enable_console', 'windows_uac_admin', 'windows_uac_uiaccess']
         for cb in checkboxes:
@@ -235,6 +266,11 @@ class AdvancedOptionsFrame(QFrame):
         """Handle flag selection from dropdown"""
         if display_text in self.current_flag_mapping:
             self.update_option('python_flag', self.current_flag_mapping[display_text])
+
+    def on_compiler_selected(self, display_text):
+        """Handle C compiler selection from dropdown"""
+        if display_text in self.compiler_mapping:
+            self.update_option('c_compiler', self.compiler_mapping[display_text])
 
     def update_translations(self, current_language):
         """Update translations for all widgets in the frame"""

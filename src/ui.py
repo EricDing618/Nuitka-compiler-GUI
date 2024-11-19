@@ -39,7 +39,37 @@ def get_theme_styles(is_dark: bool) -> str:
             QTextEdit { border: 1px solid #444; border-radius: 3px; background: #383838; color: #fff; }
             QScrollArea { border: none; background-color: transparent; }
             QLabel { color: #fff; }
-            QComboBox { background: #383838; color: #fff; border: 1px solid #444; border-radius: 3px; padding: 5px; }
+            QComboBox { 
+                background: #383838; 
+                color: #fff; 
+                border: 1px solid #444; 
+                border-radius: 3px; 
+                padding: 5px;
+                min-height: 25px;
+            }
+            QComboBox:hover {
+                border: 1px solid #666;
+            }
+            QComboBox:focus {
+                border: 1px solid #0078D4;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox::down-arrow {
+                image: url(down_arrow_white.png);
+                width: 12px;
+                height: 12px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #383838;
+                color: #fff;
+                selection-background-color: #0078D4;
+                selection-color: #fff;
+                border: 1px solid #444;
+                outline: none;
+            }
             QMessageBox { background-color: #2d2d2d; color: #fff; }
             QMessageBox QLabel { color: #fff; }
             QMessageBox QPushButton { min-width: 80px; }
@@ -57,6 +87,35 @@ def get_theme_styles(is_dark: bool) -> str:
             QProgressBar::chunk { background-color: #0078D4; }
             QTextEdit { border: 1px solid #ccc; border-radius: 3px; }
             QScrollArea { border: none; background-color: transparent; }
+            QComboBox {
+                background: white;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 5px;
+                min-height: 25px;
+            }
+            QComboBox:hover {
+                border: 1px solid #999;
+            }
+            QComboBox:focus {
+                border: 1px solid #0078D4;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox::down-arrow {
+                image: url(down_arrow_black.png);
+                width: 12px;
+                height: 12px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                selection-background-color: #0078D4;
+                selection-color: white;
+                border: 1px solid #ccc;
+                outline: none;
+            }
             QMessageBox { background-color: #fff; }
             QMessageBox QPushButton { min-width: 80px; }
         """

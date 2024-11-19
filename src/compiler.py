@@ -148,6 +148,13 @@ class NuitkaCompiler:
             if options.get('build_name'):
                 command.append(f"--output-filename={options['build_name']}")
             
+            # Add C compiler if specified
+            if options.get('c_compiler'):
+                command.extend(["--mingw64" if options['c_compiler'] == 'mingw64' else
+                              "--msvc" if options['c_compiler'] == 'msvc' else 
+                              "--mingw32" if options['c_compiler'] == 'mingw32' else
+                              "--clang" if options['c_compiler'] == 'clang' else ""])
+            
             command.append(file_path)
             
             output_callback("Starting compilation with command:\n" + " ".join(command) + "\n")
