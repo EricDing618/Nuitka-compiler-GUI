@@ -112,13 +112,13 @@ class NuitkaCompiler:
                 
             # Advanced options
             if options.get('windows_icon_path'):
-                command.extend(["--windows-icon-from-ico", options['windows_icon_path']])
+                command.extend(["--windows-icon-from-ico="+options['windows_icon_path']])
             if options.get('company_name'):
-                command.extend(["--company-name", options['company_name']])
+                command.extend(["--company-name="+options['company_name']])
             if options.get('product_name'):
-                command.extend(["--product-name", options['product_name']])
+                command.extend(["--product-name="+options['product_name']])
             if options.get('file_version'):
-                command.extend(["--file-version", options['file_version']])
+                command.extend(["--file-version="+options['file_version']])
             if options.get('output_dir'):
                 # Ensure output directory exists
                 os.makedirs(options['output_dir'], exist_ok=True)
@@ -138,11 +138,11 @@ class NuitkaCompiler:
             if options.get('include_package'):
                 for package in options['include_package'].split(','):
                     if package.strip():
-                        command.extend(["--include-package", package.strip()])
+                        command.extend(["--include-package="+package.strip()])
             if options.get('include_module'):
                 for module in options['include_module'].split(','):
                     if module.strip():
-                        command.extend(["--include-module", module.strip()])
+                        command.extend(["--include-module="+module.strip()])
             
             # Build name option
             if options.get('build_name'):
